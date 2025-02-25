@@ -18,7 +18,10 @@ export const listFiles = (folder: string) => {
   const files: GoogleAppsScript.Drive.File[] = [];
   const filesIterator = DriveApp.getFolderById(folder).getFiles();
   while (filesIterator.hasNext()) {
-    files.push(filesIterator.next());
+    const file = filesIterator.next();
+    if (['image/jpeg', 'image/png'].includes(file.getMimeType())) {
+      files.push(file);
+    }
   }
   return files;
 };
