@@ -107,22 +107,8 @@ export class AppComponent implements OnInit {
   backgroundRemoval = false;
   isLoading = false;
   loadingProgress?: number = undefined;
-
-  form: FormGroup = this.formBuilder.group({
-    backgrounds: this.formBuilder.array(
-      [].map(bg => this.formBuilder.group(bg))
-    ),
-  });
-
-  get backgrounds(): FormArray {
-    return this.form.get('backgrounds') as FormArray;
-  }
-
-  constructor(
-    private ngZone: NgZone,
-    private formBuilder: FormBuilder,
-    private httpClient: HttpClient
-  ) {}
+  concept = '';
+  prompt = '';
 
   ngOnInit(): void {
     this.isLoading = true;

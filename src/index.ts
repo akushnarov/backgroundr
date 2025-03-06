@@ -16,6 +16,7 @@
 
 import { ensureFolderExists, getFileById, listFiles } from './drive-api';
 import { getPredictionEndpoint, predict } from './vertex-ai';
+import { generateGeminiPrompt } from './gemini-api';
 
 const HEADER_ROWS = 1;
 const IMAGE_SHEET = SpreadsheetApp.getActive().getSheetByName('Images');
@@ -249,3 +250,7 @@ const setConfig = (config: Config) => {
     JSON.stringify(config)
   );
 };
+
+const generatePrompt = (concept: string, projectId: string, region: string) => {
+  return generateGeminiPrompt(concept, projectId, region);
+}

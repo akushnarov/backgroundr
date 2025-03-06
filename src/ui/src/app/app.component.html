@@ -101,6 +101,34 @@ limitations under the License.
     </form>
   </mat-expansion-panel>
   <br />
+    <mat-form-field>
+    <mat-label>Concept</mat-label>
+    <input
+      matInput
+      type="text"
+      [(ngModel)]="concept"
+      [disabled]="isLoading"
+    />
+  </mat-form-field>
+  <button
+    mat-raised-button
+    class="button"
+    color="primary"
+    [disabled]="isLoading"
+    (click)="generatePrompt()"
+  >
+    Generate Prompt
+  </button>
+  <mat-form-field>
+    <mat-label>Prompt</mat-label>
+    <input
+      matInput
+      type="text"
+      [(ngModel)]="prompt"
+      [disabled]="isLoading"
+    />
+  </mat-form-field>
+  <br />
   <button
     mat-raised-button
     color="primary"
