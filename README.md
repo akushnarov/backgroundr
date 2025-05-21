@@ -29,7 +29,7 @@ BackgroundR automatically creates new backgrounds for your images based on a tex
 
 We aim to keep BackgroundR simple yet scalable. As a result, we have built it as an Apps Script extension running on top of Google Sheets. To get started, follow the instructions below:
 
-1. Make a copy of this [Google Sheet](https://docs.google.com/spreadsheets/d/1FPlQbvqovVNlUFsCLJ9c_aEZ9bMDiZxVi4VsDn7daWM/edit?gid=1500542581#gid=1500542581).
+1. Make a copy of this [Google Sheet](https://docs.google.com/spreadsheets/d/1FPlQbvqovVNlUFsCLJ9c_aEZ9bMDiZxVi4VsDn7daWM/copy).
 2. Find the BackgroundR menu in the menu bar and select "Open". You might need to authorize the sheet to run on your behalf.
 3. Create a Google drive folder to store your raw "base" product images.
 4. Copy your Google drive folder's ID into "Driver Folder ID". The ID is found in the link to your folder path and it should be something like: "1jt88MGoqMTGhuGYujiOpY8wUD_3aZsJF"
