@@ -36,16 +36,18 @@ const fetchJson = <T>(
 export const getPredictionEndpoint = (
   projectId: string,
   region: string,
-  modelId: string
+  modelId: string,
+  generateContent = 'predict'
 ): string => {
-  return `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/${modelId}:predict`;
+  return `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/${modelId}:${generateContent}`;
 };
 
 export const getPredictionBody = (
   prompt: string,
   image: string,
   modelId: string,
-  backgroundRemoval: boolean
+  backgroundRemoval: boolean,
+  mimeType = 'image/jpeg'
 ): GoogleAppsScript.URL_Fetch.URLFetchRequestOptions => {
   if (modelId.startsWith('imagegeneration@')) {
     return createRequestOptions({
@@ -63,6 +65,49 @@ export const getPredictionBody = (
           editMode: 'product-image',
         },
       },
+    });
+  } else if (modelId.startsWith('gemini')) {
+    return createRequestOptions({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: image,
+              },
+            },
+            {
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 1,
+        maxOutputTokens: 32768,
+        responseModalities: ['TEXT', 'IMAGE'],
+        topP: 0.95,
+      },
+      safetySettings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'OFF',
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'OFF',
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'OFF',
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'OFF',
+        },
+      ],
     });
   } else if (modelId.startsWith('imagen-3.0')) {
     if (backgroundRemoval) {
@@ -133,14 +178,15 @@ export const predict = (
   image: string,
   predictionEndpoint: string,
   modelId: string,
-  backgroundRemoval: boolean
+  backgroundRemoval: boolean,
+  mimeType = 'image/jpeg'
 ): PredictionResponse => {
   // respect rate limitations
   Utilities.sleep(1000);
   console.log(`Prompt: ${prompt}`);
   const res = fetchJson<PredictionResponse>(
     predictionEndpoint,
-    getPredictionBody(prompt, image, modelId, backgroundRemoval)
+    getPredictionBody(prompt, image, modelId, backgroundRemoval, mimeType)
   );
   console.log(JSON.stringify(res, null, 2));
   return res;
