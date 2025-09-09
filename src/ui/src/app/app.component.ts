@@ -195,8 +195,12 @@ export class AppComponent implements OnInit {
     });
   }
 
-  async createVertexAiCall(current: ImageQueue) {
-    const vertexEndpoint = `https://${this.region}-aiplatform.googleapis.com/v1/projects/${this.projectId}/locations/${this.region}/publishers/google/models/${this.modelId}:predict`;
+  async createVertexAiCall(current: ImageQueue, predictFunction = 'predict') {
+    if (this.modelId.startsWith('gemini')) {
+      predictFunction = 'generateContent';
+    }
+    const vertexEndpoint = `https://${this.region}-aiplatform.googleapis.com/v1/projects/${this.projectId}/locations/${this.region}/publishers/google/models/${this.modelId}:${predictFunction}`;
+    console.log({ vertexEndpoint });
     const imageBlob = await firstValueFrom(
       this.httpClient.get(
         `https://www.googleapis.com/drive/v3/files/${current.fileId}?alt=media`,
@@ -229,8 +233,55 @@ export class AppComponent implements OnInit {
     );
   }
 
-  getImagenRequestBody(prompt: string, imageBase64: string) {
-    if (this.modelId.startsWith('imagegeneration@')) {
+  getImagenRequestBody(
+    prompt: string,
+    imageBase64: string,
+    mimeType = 'image/jpeg'
+  ) {
+    if (this.modelId.startsWith('gemini')) {
+      return JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: prompt,
+              },
+              {
+                inlineData: {
+                  mimeType,
+                  data: imageBase64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 1,
+          maxOutputTokens: 32768,
+          responseModalities: ['TEXT', 'IMAGE'],
+          topP: 0.95,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'OFF',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'OFF',
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'OFF',
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'OFF',
+          },
+        ],
+      });
+    } else if (this.modelId.startsWith('imagegeneration@')) {
       return JSON.stringify({
         instances: [
           {

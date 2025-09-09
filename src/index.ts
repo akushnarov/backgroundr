@@ -147,6 +147,7 @@ const processImageAssets = (
     region,
     modelId
   );
+  console.log({ imageGenerationEndpoint });
   IMAGE_SHEET.getRange('B:B')
     .offset(HEADER_ROWS, 0)
     .getValues()
@@ -156,6 +157,7 @@ const processImageAssets = (
       }
       const file = getFileById(id);
       const fileBlob = file.getBlob();
+      const mimeType = file.getMimeType();
       const bytes = fileBlob.getBytes();
       const base64Data = Utilities.base64Encode(bytes);
       try {
@@ -174,7 +176,8 @@ const processImageAssets = (
             base64Data,
             imageGenerationEndpoint,
             modelId,
-            backgroundRemoval
+            backgroundRemoval,
+            mimeType
           );
           return SpreadsheetApp.newCellImage()
             .setSourceUrl(

@@ -38,6 +38,12 @@ export const getPredictionEndpoint = (
   region: string,
   modelId: string
 ): string => {
+  if (modelId.startsWith('gemini')) {
+    return (
+      `https://aiplatform.googleapis.com/v1/publishers/google/models` +
+      `/${modelId}:generateContent`
+    );
+  }
   return `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/${modelId}:predict`;
 };
 
@@ -45,9 +51,57 @@ export const getPredictionBody = (
   prompt: string,
   image: string,
   modelId: string,
-  backgroundRemoval: boolean
+  backgroundRemoval: boolean,
+  mimeType = 'image/jpeg'
 ): GoogleAppsScript.URL_Fetch.URLFetchRequestOptions => {
-  if (modelId.startsWith('imagegeneration@')) {
+  if (modelId.startsWith('gemini')) {
+    console.log('getPredictionBody:Gemini was selected');
+    const body = createRequestOptions({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: prompt,
+            },
+            {
+              inlineData: {
+                mimeType,
+                data: image,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 1,
+        maxOutputTokens: 32768,
+        responseModalities: ['TEXT', 'IMAGE'],
+        topP: 0.95,
+      },
+      safetySettings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+      ],
+    });
+
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    return body;
+  } else if (modelId.startsWith('imagegeneration@')) {
     return createRequestOptions({
       instances: [
         {
@@ -133,15 +187,16 @@ export const predict = (
   image: string,
   predictionEndpoint: string,
   modelId: string,
-  backgroundRemoval: boolean
+  backgroundRemoval: boolean,
+  mimeType?: string
 ): PredictionResponse => {
   // respect rate limitations
   Utilities.sleep(1000);
   console.log(`Prompt: ${prompt}`);
   const res = fetchJson<PredictionResponse>(
     predictionEndpoint,
-    getPredictionBody(prompt, image, modelId, backgroundRemoval)
+    getPredictionBody(prompt, image, modelId, backgroundRemoval, mimeType)
   );
-  console.log(JSON.stringify(res, null, 2));
+  console.log('API Response:', JSON.stringify(res, null, 2));
   return res;
 };
