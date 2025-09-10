@@ -1,0 +1,69 @@
+/**
+ * Copyright 2024 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+export class OnePrompt {
+  static generate(sheetName: string, promptPrefix = '') {
+    if (!SpreadsheetApp?.getActiveSpreadsheet()?.getSheetByName(sheetName)) {
+      throw new Error(`Sheet ${sheetName} not found`);
+    }
+
+    const parts = SpreadsheetApp?.getActiveSpreadsheet()
+      ?.getSheetByName(sheetName)
+      ?.getDataRange()
+      ?.getDisplayValues();
+    if (!parts || !parts.length) {
+      console.log('Empty list of the dropdowns');
+      return promptPrefix;
+    }
+    console.log({ parts });
+
+    const partsAsObject: { [key: string]: string[] } = {};
+    const headers = parts.shift();
+    console.log({ headers, parts });
+
+    parts.forEach(part => {
+      console.log({ part });
+
+      part.forEach((p, i) => {
+        if (p && p.length) {
+          if (headers && headers[i]) {
+            if (!(headers[i] in partsAsObject)) {
+              partsAsObject[headers[i]] = [];
+            }
+            partsAsObject[headers[i]].push(p);
+          }
+        }
+      });
+    });
+    console.log({ partsAsObject });
+
+    const promptParts: string[] = [];
+    for (const partType in partsAsObject) {
+      const promptForPart =
+        `### ${partType}:\n` +
+        partsAsObject[partType].map(p => `* ${p}`).join('\n');
+
+      promptParts.push(promptForPart);
+    }
+
+    return (
+      (promptPrefix ? promptPrefix + '\n\n' : '') + promptParts.join('\n\n')
+    );
+  }
+}
+
+export function test_OnePromp() {
+  console.log(OnePrompt.generate('Dropdowns'));
+}

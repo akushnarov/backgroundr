@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
+import { test_config } from './config';
 import { ensureFolderExists, getFileById, listFiles } from './drive-api';
-import { getPredictionEndpoint, predict } from './vertex-ai';
+import { generateOnePromptImages } from './generate-backgrounds';
+import { queryGemini } from './nano-banano';
+import { test_OnePromp } from './one-prompt';
+import { getPredictionEndpoint } from './vertex-ai';
+test_OnePromp;
+
+test_config;
 
 const HEADER_ROWS = 1;
 const IMAGE_SHEET = SpreadsheetApp.getActive().getSheetByName('Images');
@@ -54,11 +61,12 @@ function include(filename: string) {
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('BackgroundR')
-    .addItem('Open', 'showSidebar')
-    .addItem('Run scaled', 'getImagesToProcess')
+    .createMenu('🍌 Image Generation')
+    .addItem('Generate backgrounds', 'generateOnePromptImages')
+    //.addItem('Run scaled', 'getImagesToProcess')
     .addToUi();
 }
+generateOnePromptImages;
 
 function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(
@@ -171,18 +179,14 @@ const processImageAssets = (
           if (currentImage !== '') {
             return null;
           }
-          const result = predict(
-            `${e.description}`,
+
+          const resultImageBase64 = queryGemini(
+            e.description,
             base64Data,
-            imageGenerationEndpoint,
-            modelId,
-            backgroundRemoval,
             mimeType
           );
           return SpreadsheetApp.newCellImage()
-            .setSourceUrl(
-              `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`
-            )
+            .setSourceUrl(`data:image/png;base64,${resultImageBase64}`)
             .build();
         });
         variations.forEach((img, i) => {
