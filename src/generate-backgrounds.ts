@@ -54,7 +54,10 @@ export function generateOnePromptImages() {
   const backgroundDefinitions = new Array(
     parseInt(config['One Prompt Number of variants'])
   ).fill(
-    OnePrompt.generate(config['Dropdowns sheet'], config['One Prompt prefix'])
+    OnePrompt.generatePrompt(
+      config['Dropdowns sheet'],
+      config['One Prompt prefix']
+    )
   );
   console.log({ backgroundDefinitions });
 

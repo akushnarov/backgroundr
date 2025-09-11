@@ -36,7 +36,3 @@ export class Config {
     );
   }
 }
-
-export function test_config() {
-  console.log(Config.readConfig());
-}

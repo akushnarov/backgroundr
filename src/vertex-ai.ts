@@ -38,7 +38,7 @@ export const getPredictionEndpoint = (
   region: string,
   modelId: string
 ): string => {
-  if (modelId.startsWith('gemini')) {
+  if (!modelId || modelId.startsWith('gemini')) {
     return (
       `https://aiplatform.googleapis.com/v1/publishers/google/models` +
       `/${modelId}:generateContent`
@@ -54,7 +54,7 @@ export const getPredictionBody = (
   backgroundRemoval: boolean,
   mimeType = 'image/jpeg'
 ): GoogleAppsScript.URL_Fetch.URLFetchRequestOptions => {
-  if (modelId.startsWith('gemini')) {
+  if (!modelId || modelId.startsWith('gemini')) {
     console.log('getPredictionBody:Gemini was selected');
     const body = createRequestOptions({
       contents: [

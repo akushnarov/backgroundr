@@ -14,7 +14,41 @@
  * limitations under the License.
  */
 export class OnePrompt {
-  static generate(sheetName: string, promptPrefix = '') {
+  static generatePromptForSheet(
+    sheetName: string,
+    promptPrefix = '',
+    promptSuffix = ''
+  ) {
+    const partsAsObject = OnePrompt.getDropdowns(sheetName);
+    return OnePrompt.generatePrompt(partsAsObject, promptPrefix, promptSuffix);
+  }
+
+  static generatePrompt(
+    partsAsObject: { [key: string]: string[] },
+    promptPrefix = '',
+    promptSuffix = ''
+  ) {
+    const promptParts = OnePrompt.generatePromptParts(partsAsObject);
+    return (
+      (promptPrefix ? promptPrefix + '\n\n' : '') +
+      promptParts.join('\n\n') +
+      (promptSuffix ? '\n\n' + promptSuffix : '')
+    );
+  }
+
+  static generatePromptParts(partsAsObject: { [key: string]: string[] }) {
+    const promptParts: string[] = [];
+    for (const partType in partsAsObject) {
+      const promptForPart =
+        `### ${partType}:\n` +
+        partsAsObject[partType].map(p => `* ${p}`).join('\n');
+
+      promptParts.push(promptForPart);
+    }
+    return promptParts;
+  }
+
+  static getDropdowns(sheetName: string) {
     if (!SpreadsheetApp?.getActiveSpreadsheet()?.getSheetByName(sheetName)) {
       throw new Error(`Sheet ${sheetName} not found`);
     }
@@ -24,8 +58,7 @@ export class OnePrompt {
       ?.getDataRange()
       ?.getDisplayValues();
     if (!parts || !parts.length) {
-      console.log('Empty list of the dropdowns');
-      return promptPrefix;
+      return {};
     }
     console.log({ parts });
 
@@ -48,22 +81,6 @@ export class OnePrompt {
       });
     });
     console.log({ partsAsObject });
-
-    const promptParts: string[] = [];
-    for (const partType in partsAsObject) {
-      const promptForPart =
-        `### ${partType}:\n` +
-        partsAsObject[partType].map(p => `* ${p}`).join('\n');
-
-      promptParts.push(promptForPart);
-    }
-
-    return (
-      (promptPrefix ? promptPrefix + '\n\n' : '') + promptParts.join('\n\n')
-    );
+    return partsAsObject;
   }
-}
-
-export function test_OnePromp() {
-  console.log(OnePrompt.generate('Dropdowns'));
 }

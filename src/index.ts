@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-import { test_config } from './config';
+import { Config } from './config';
 import { ensureFolderExists, getFileById, listFiles } from './drive-api';
-import { generateOnePromptImages } from './generate-backgrounds';
 import { queryGemini } from './nano-banano';
-import { test_OnePromp } from './one-prompt';
+import { OnePrompt } from './one-prompt';
 import { getPredictionEndpoint } from './vertex-ai';
-test_OnePromp;
-
-test_config;
 
 const HEADER_ROWS = 1;
 const IMAGE_SHEET = SpreadsheetApp.getActive().getSheetByName('Images');
 const SCALED_SHEET = SpreadsheetApp.getActive().getSheetByName('Scaled');
+const CONFIG = Config.readConfig();
 
 interface BackgroundDefinition {
-  title: string;
+  title?: string;
   description: string;
 }
 
@@ -40,14 +37,6 @@ interface ImageQueue {
   fileId: string;
   prompt: string;
   variationId: number;
-}
-
-interface Config {
-  driveFolderId: string;
-  projectId: string;
-  modelId: string;
-  region: string;
-  backgroundDefinitions: BackgroundDefinition[];
 }
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -61,16 +50,51 @@ function include(filename: string) {
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🍌 Image Generation')
-    .addItem('Generate backgrounds', 'generateOnePromptImages')
-    //.addItem('Run scaled', 'getImagesToProcess')
+    .createMenu('🍌 BackgroundR')
+    //.addItem('Generate backgrounds', 'generateOnePromptImages')
+    .addItem('Open configurator', 'showSidebar')
     .addToUi();
 }
-generateOnePromptImages;
 
 function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(
     HtmlService.createTemplateFromFile('ui').evaluate().setTitle(' ')
+  );
+}
+
+function loadDropDowns() {
+  const config = Config.readConfig();
+  return OnePrompt.getDropdowns(config['Dropdowns sheet']);
+}
+
+function processImagesForSelectedDropdowns(
+  numberOfImages = 1,
+  partsAsObject?: {
+    [key: string]: string[];
+  }
+) {
+  const prefix = CONFIG['Prompt Prefix'];
+  const suffix = CONFIG['Prompt Suffix'];
+
+  const prompt = partsAsObject
+    ? OnePrompt.generatePrompt(partsAsObject, prefix, suffix)
+    : OnePrompt.generatePromptForSheet(
+        CONFIG['Dropdowns sheet'],
+        prefix,
+        suffix
+      );
+  console.log({ prompt });
+
+  const manyPrompts = new Array(numberOfImages).fill(prompt).map(p => ({
+    description: p,
+  }));
+
+  return processImageAssets(
+    manyPrompts,
+    CONFIG['Cloud Project Id'],
+    '',
+    CONFIG['Image Generation Model'],
+    false
   );
 }
 
@@ -235,24 +259,4 @@ const addFolderToQueue = (
 
 const getOAuthToken = () => {
   return ScriptApp.getOAuthToken();
-};
-
-const getConfig = (): Config => {
-  const config = PropertiesService.getScriptProperties().getProperty('config');
-  return config
-    ? JSON.parse(config)
-    : {
-        driveFolderId: '',
-        projectId: '',
-        modelId: '',
-        region: '',
-        backgroundDefinitions: [],
-      };
-};
-
-const setConfig = (config: Config) => {
-  PropertiesService.getScriptProperties().setProperty(
-    'config',
-    JSON.stringify(config)
-  );
 };
