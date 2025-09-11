@@ -20,6 +20,7 @@ limitations under the License.
   *ngIf="isLoading"
 ></mat-progress-bar>
 <div class="main-content">
+  {{ selectedValues | json }}
   <h1 style="text-align: center">🍌 BackgroundR</h1>
   <mat-card class="dropdown-container">
     <mat-card-header>
@@ -27,13 +28,9 @@ limitations under the License.
     </mat-card-header>
     <mat-card-content>
       <div *ngFor="let dropdown of dropdownsData | keyvalue">
-        <mat-form-field appearance="fill">
+        <mat-form-field>
           <mat-label>{{ dropdown.key }}</mat-label>
-          <mat-select
-            [(ngModel)]="selectedValues[dropdown.key]"
-            (selectionChange)="onDropdownChange(dropdown.key, $event.value)"
-          >
-            <mat-option>-- None --</mat-option>
+          <mat-select [(value)]="selectedValues[dropdown.key]">
             <mat-option *ngFor="let value of dropdown.value" [value]="value">
               {{ value }}
             </mat-option>

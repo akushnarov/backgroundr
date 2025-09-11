@@ -26,6 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const google: any;
@@ -51,6 +52,7 @@ export interface DropdownData {
     MatIconModule,
     MatSelectModule,
     MatCheckboxModule,
+    BrowserAnimationsModule,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
@@ -58,18 +60,13 @@ export interface DropdownData {
 export class AppComponent implements OnInit {
   isLoading = false;
   loadingProgress: number | undefined;
-  dropdownsData: DropdownData = {};
+  dropdownsData: DropdownData = { 'Loading...': [] };
   numberOfImages = 1;
   selectedValues: { [key: string]: string | null } = {};
 
   constructor(private cd: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    // Initialize selected values
-    for (const key of Object.keys(this.dropdownsData)) {
-      this.selectedValues[key] = null;
-    }
-
     this.loadDropDowns();
   }
 
@@ -79,13 +76,14 @@ export class AppComponent implements OnInit {
   }
 
   loadDropDowns() {
-    this.isLoading = true;
+    //this.isLoading = true;
     google.script.run
       .withSuccessHandler((dropdowns: DropdownData) => {
-        this.dropdownsData = dropdowns;
+        this.dropdownsData = { ...dropdowns };
         console.log('dropdownsData', this.dropdownsData);
         this.isLoading = false;
-        this.cd.detectChanges();
+
+        //this.cd.detectChanges();
       })
       .loadDropDowns();
   }
