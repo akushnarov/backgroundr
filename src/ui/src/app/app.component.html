@@ -20,7 +20,6 @@ limitations under the License.
   *ngIf="isLoading"
 ></mat-progress-bar>
 <div class="main-content">
-  {{ selectedValues | json }}
   <h1 style="text-align: center">🍌 BackgroundR</h1>
   <mat-card class="dropdown-container">
     <mat-card-header>
@@ -31,6 +30,7 @@ limitations under the License.
         <mat-form-field>
           <mat-label>{{ dropdown.key }}</mat-label>
           <mat-select [(value)]="selectedValues[dropdown.key]">
+            <mat-option> -- </mat-option>
             <mat-option *ngFor="let value of dropdown.value" [value]="value">
               {{ value }}
             </mat-option>
@@ -58,7 +58,7 @@ limitations under the License.
         <input
           matInput
           type="number"
-          [ngModel]="numberOfImages"
+          [(ngModel)]="numberOfImages"
           placeholder="Number of images to generate"
         />
       </mat-form-field>
@@ -72,8 +72,9 @@ limitations under the License.
         [disabled]="isLoading"
         class="button"
         (click)="generateSelected()"
+        matTooltip="Generate the images based only on the selected values above"
       >
-        🎨 Generate Selected
+        🎨 Apply Selections
       </button>
       <button
         mat-raised-button
@@ -81,8 +82,9 @@ limitations under the License.
         [disabled]="isLoading"
         class="button"
         (click)="generateAutomatically()"
+        matTooltip="Generate the images based on the 'Universal Prompt' (does not take into account selections above)"
       >
-        🤖 Generate Automatically
+        🤖 Universal Generate
       </button>
     </mat-card-content>
   </mat-card>

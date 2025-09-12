@@ -53,7 +53,12 @@ function onOpen() {
     .createMenu('🍌 BackgroundR')
     //.addItem('Generate backgrounds', 'generateOnePromptImages')
     .addItem('Open configurator', 'showSidebar')
+    .addItem('Load images from Google Drive', 'getImagesFromDrive')
     .addToUi();
+}
+
+function getImagesFromDrive() {
+  getImageAssets(CONFIG['Drive Folder Id']);
 }
 
 function showSidebar() {
@@ -62,17 +67,20 @@ function showSidebar() {
   );
 }
 
+// Trigered from sidebar angular
 function loadDropDowns() {
   const config = Config.readConfig();
   return OnePrompt.getDropdowns(config['Dropdowns sheet']);
 }
 
-function processImagesForSelectedDropdowns(
+// Trigered from sidebar angular
+function generateImages(
   numberOfImages = 1,
   partsAsObject?: {
     [key: string]: string[];
   }
 ) {
+  console.log('generateImages', { numberOfImages, partsAsObject });
   const prefix = CONFIG['Prompt Prefix'];
   const suffix = CONFIG['Prompt Suffix'];
 
@@ -88,6 +96,7 @@ function processImagesForSelectedDropdowns(
   const manyPrompts = new Array(numberOfImages).fill(prompt).map(p => ({
     description: p,
   }));
+  console.log({ manyPrompts });
 
   return processImageAssets(
     manyPrompts,

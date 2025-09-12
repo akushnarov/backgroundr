@@ -241,7 +241,7 @@ export class VertexAiApi {
       );
       throw new JsonParseError(result.getContentText('UTF-8'));
     }
-    console.log('result', JSON.stringify(resultParsed, null, 2));
+    //console.log('result', JSON.stringify(resultParsed, null, 2));
     const geminiResponse = resultParsed.candidates
       .map(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

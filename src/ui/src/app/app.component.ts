@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Component, NgZone, OnInit } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -26,6 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,6 +54,7 @@ export interface DropdownData {
     MatSelectModule,
     MatCheckboxModule,
     BrowserAnimationsModule,
+    MatTooltipModule,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
@@ -64,7 +66,7 @@ export class AppComponent implements OnInit {
   numberOfImages = 1;
   selectedValues: { [key: string]: string | null } = {};
 
-  constructor(private cd: ChangeDetectorRef) {}
+  constructor(private zone: NgZone) {}
 
   ngOnInit(): void {
     this.loadDropDowns();
@@ -76,38 +78,42 @@ export class AppComponent implements OnInit {
   }
 
   loadDropDowns() {
-    //this.isLoading = true;
+    this.isLoading = true;
     google.script.run
       .withSuccessHandler((dropdowns: DropdownData) => {
-        this.dropdownsData = { ...dropdowns };
-        console.log('dropdownsData', this.dropdownsData);
-        this.isLoading = false;
-
-        //this.cd.detectChanges();
+        this.zone.run(() => {
+          this.dropdownsData = dropdowns;
+          console.log('dropdownsData', this.dropdownsData);
+          this.isLoading = false;
+        });
       })
       .loadDropDowns();
   }
 
+  setLoadingToFinished() {
+    this.zone.run(() => {
+      this.isLoading = false;
+    });
+  }
+
   generateSelected() {
     this.isLoading = true;
+    console.log('generateAutomatically', {
+      numberOfImages: this.numberOfImages,
+      selectedValues: this.selectedValues,
+    });
     google.script.run
-      .withSuccessHandler(() => {
-        this.isLoading = false;
-        this.cd.detectChanges();
-      })
-      .processImagesForSelectedDropdowns(
-        this.numberOfImages,
-        this.selectedValues
-      );
+      .withSuccessHandler(() => this.setLoadingToFinished())
+      .generateImages(this.numberOfImages, this.selectedValues);
   }
 
   generateAutomatically() {
+    console.log('generateAutomatically', {
+      numberOfImages: this.numberOfImages,
+    });
     this.isLoading = true;
     google.script.run
-      .withSuccessHandler(() => {
-        this.isLoading = false;
-        this.cd.detectChanges();
-      })
-      .processImagesForSelectedDropdowns(this.numberOfImages);
+      .withSuccessHandler(() => this.setLoadingToFinished())
+      .generateImages(this.numberOfImages);
   }
 }
