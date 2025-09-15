@@ -30,7 +30,7 @@ limitations under the License.
         <mat-form-field>
           <mat-label>{{ dropdown.key }}</mat-label>
           <mat-select [(value)]="selectedValues[dropdown.key]">
-            <mat-option> -- </mat-option>
+            <mat-option [value]="null"> -- </mat-option>
             <mat-option *ngFor="let value of dropdown.value" [value]="value">
               {{ value }}
             </mat-option>
@@ -48,12 +48,12 @@ limitations under the License.
       </button>
     </mat-card-content>
   </mat-card>
-  <mat-card class="dropdown-container">
+  <mat-card class="other-settings">
     <mat-card-header>
       <mat-card-title>Other settings</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <mat-form-field>
+      <mat-form-field appearance="fill">
         <mat-label>Number of images to generate</mat-label>
         <input
           matInput
@@ -62,6 +62,32 @@ limitations under the License.
           placeholder="Number of images to generate"
         />
       </mat-form-field>
+
+      <mat-slide-toggle [(ngModel)]="autoScoreImages">
+        AI quality control
+      </mat-slide-toggle>
+
+      <div *ngIf="autoScoreImages">
+        <mat-form-field appearance="fill">
+          <mat-label>Scoring threshold</mat-label>
+          <input
+            matInput
+            type="number"
+            [(ngModel)]="scoringThreshold"
+            matTooltip="Regenerate images if the quality is below this threshold"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Max regeneration</mat-label>
+          <input
+            matInput
+            type="number"
+            [(ngModel)]="maxRegenerations"
+            matTooltip="Stop re-generating images after this many attempts"
+          />
+        </mat-form-field>
+      </div>
     </mat-card-content>
   </mat-card>
   <mat-card class="buttons">

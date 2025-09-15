@@ -26,6 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -55,6 +56,7 @@ export interface DropdownData {
     MatCheckboxModule,
     BrowserAnimationsModule,
     MatTooltipModule,
+    MatSlideToggleModule,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
@@ -65,6 +67,9 @@ export class AppComponent implements OnInit {
   dropdownsData: DropdownData = { 'Loading...': [] };
   numberOfImages = 1;
   selectedValues: { [key: string]: string | null } = {};
+  autoScoreImages = false;
+  scoringThreshold = 5;
+  maxRegenerations = 1;
 
   constructor(private zone: NgZone) {}
 

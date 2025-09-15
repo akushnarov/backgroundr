@@ -175,7 +175,12 @@ export class VertexAiApi {
    * @remarks
    * Note: Only one of `fileUri` or `image` should be provided. If both are provided, `image` will be ignored.
    */
-  callGeminiApi(text: string, image = '', mimeType = 'image/jpg') {
+  callGeminiApi(
+    text: string,
+    image = '',
+    mimeType = 'image/jpg',
+    json = false
+  ) {
     const options = Object.assign({}, this._baseOptions);
 
     const parts: GeminiRequest[] = [{ text }];
@@ -217,7 +222,7 @@ export class VertexAiApi {
         },
       ],
     };
-    //console.log(JSON.stringify(payload, null, 2));
+
     options.payload = JSON.stringify(payload);
     const result = UrlFetchApp.fetch(this.getGeminiEndPoint(), options);
     if (200 !== result.getResponseCode()) {
@@ -241,58 +246,45 @@ export class VertexAiApi {
       );
       throw new JsonParseError(result.getContentText('UTF-8'));
     }
-    //console.log('result', JSON.stringify(resultParsed, null, 2));
-    const geminiResponse = resultParsed.candidates
-      .map(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (candidate: any) =>
-          candidate?.content?.parts
+
+    let geminiResponse;
+    if (!json) {
+      geminiResponse = resultParsed.candidates
+        .map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (candidate: any) =>
+            candidate?.content?.parts
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ?.map((part: any) => part?.inlineData?.data)
+              .join('')
+        )
+        .join('');
+    } else {
+      geminiResponse = resultParsed.candidates
+        .map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (candidate: any) =>
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ?.map((part: any) => part?.inlineData?.data)
-            .join('')
-      )
-      .join('');
+            candidate?.content?.parts?.map((part: any) => part?.text).join('')
+        )
+        .join('');
+    }
+
     return geminiResponse;
-  }
-}
-
-/**
- * Reads a file from Google Drive and returns it as a Base64 encoded string.
- *
- * @param {string} fileId The ID of the file in Google Drive.
- * @return {string} The Base64 encoded content of the file.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getFileAsBase64(fileId: string) {
-  try {
-    // Get the file from Drive using its ID
-    const file = DriveApp.getFileById(fileId);
-
-    // Get the file's content as a blob
-    const blob = file.getBlob();
-
-    // Get the bytes from the blob
-    const bytes = blob.getBytes();
-
-    // Encode the bytes to a Base64 string
-    const base64String = Utilities.base64Encode(bytes);
-
-    return base64String;
-  } catch (e: unknown) {
-    Logger.log('Error: ' + e?.toString());
-    return null;
   }
 }
 
 export function queryGemini(
   prompt: string,
   image: string,
-  mimeType = 'image/jpg'
+  mimeType = 'image/jpg',
+  gcpProjectId = 'gps-generative-ai',
+  modelId = 'gemini-2.5-flash-image-preview'
 ) {
   return new VertexAiApi(
-    'gps-generative-ai', // 'veo-testing', // TODO: Take from the user
-    'us-central1',
+    gcpProjectId,
+    '',
     'aiplatform.googleapis.com',
-    'gemini-2.5-flash-image-preview'
+    modelId
   ).callGeminiApi(prompt, image, mimeType);
 }

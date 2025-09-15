@@ -18,7 +18,6 @@ import { Config } from './config';
 import { ensureFolderExists, getFileById, listFiles } from './drive-api';
 import { queryGemini } from './nano-banano';
 import { OnePrompt } from './one-prompt';
-import { getPredictionEndpoint } from './vertex-ai';
 
 const HEADER_ROWS = 1;
 const IMAGE_SHEET = SpreadsheetApp.getActive().getSheetByName('Images');
@@ -51,7 +50,6 @@ function include(filename: string) {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🍌 BackgroundR')
-    //.addItem('Generate backgrounds', 'generateOnePromptImages')
     .addItem('Open configurator', 'showSidebar')
     .addItem('Load images from Google Drive', 'getImagesFromDrive')
     .addToUi();
@@ -103,7 +101,8 @@ function generateImages(
     CONFIG['Cloud Project Id'],
     '',
     CONFIG['Image Generation Model'],
-    false
+    scoringThreshold,
+    maxRegenerations
   );
 }
 
@@ -173,22 +172,67 @@ const getImageAssets = (folderId: string) => {
     });
 };
 
+const getScoringHeaders = () => {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(
+    CONFIG['Scoring results sheet']
+  );
+  return sheet
+    ?.getRange(1, 2, 1, sheet.getLastColumn() - 2)
+    .getDisplayValues()[0];
+};
+
+class ScoringError extends Error {}
+const scoreImage = (image: string) => {
+  const headers = getScoringHeaders();
+  const outputSpec =
+    '## Ouput only JSON (no md or any additional formatting):\n' +
+    '{' +
+    ['Score', ...(headers || [])]?.map(h => `'${h}': ...,`).join('\n') +
+    '}';
+
+  const geminiResponse = queryGemini(
+    CONFIG['Image Scoring Prompt'] + '\n\n' + outputSpec,
+    image,
+    'image/png',
+    CONFIG['Cloud Project Id'],
+    CONFIG['Image Generation Model']
+  );
+
+  try {
+    const geminiResponseParsed = JSON.parse(
+      geminiResponse.replaceAll('```json', '').replaceAll('```', '')
+    );
+    console.log({ geminiResponseParsed });
+    addToScoringSheet(image, geminiResponseParsed);
+    return Number(geminiResponseParsed['Scoring']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (e: any) {
+    console.log('Not able to parse JSON...');
+    throw new ScoringError(e);
+  }
+};
+
+const addToScoringSheet = (
+  image: string,
+  geminiResponseParsed: { [key: string]: string }
+) => {
+  const headers = getScoringHeaders();
+  SpreadsheetApp.newCellImage()
+    .setSourceUrl(`data:image/png;base64,${image}`)
+    .build();
+};
+
 const processImageAssets = (
   backgroundDefinitions: BackgroundDefinition[],
   projectId: string,
   region: string,
   modelId: string,
-  backgroundRemoval: boolean
+  scoringThreshold?: number,
+  maxRegenerations?: number
 ) => {
   if (!IMAGE_SHEET) {
     throw `Sheet 'Images' not found`;
   }
-  const imageGenerationEndpoint = getPredictionEndpoint(
-    projectId,
-    region,
-    modelId
-  );
-  console.log({ imageGenerationEndpoint });
   IMAGE_SHEET.getRange('B:B')
     .offset(HEADER_ROWS, 0)
     .getValues()
@@ -213,11 +257,40 @@ const processImageAssets = (
             return null;
           }
 
-          const resultImageBase64 = queryGemini(
-            e.description,
-            base64Data,
-            mimeType
-          );
+          let resultImageBase64;
+          if (scoringThreshold && maxRegenerations) {
+            for (let i = 0; i < maxRegenerations; i++) {
+              resultImageBase64 = queryGemini(
+                e.description,
+                base64Data,
+                mimeType,
+                CONFIG['Cloud Project Id'],
+                CONFIG['Image Generation Model']
+              );
+              const imageScore = scoreImage(base64Data);
+
+              const cell = IMAGE_SHEET.getRange(
+                currentIndex + 1 + HEADER_ROWS,
+                4
+              );
+              cell.setValue(`Score: ${imageScore}`);
+
+              if (imageScore >= scoringThreshold) {
+                cell.setFontColor('#000000').setFontWeight('normal');
+                break;
+              } else {
+                cell.setFontColor('#ff0000').setFontWeight('bold');
+              }
+            }
+          } else {
+            resultImageBase64 = queryGemini(
+              e.description,
+              base64Data,
+              mimeType,
+              CONFIG['Cloud Project Id'],
+              CONFIG['Image Generation Model']
+            );
+          }
           return SpreadsheetApp.newCellImage()
             .setSourceUrl(`data:image/png;base64,${resultImageBase64}`)
             .build();
