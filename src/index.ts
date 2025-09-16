@@ -50,8 +50,8 @@ function include(filename: string) {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🍌 BackgroundR')
-    .addItem('Open configurator', 'showSidebar')
-    .addItem('Load images from Google Drive', 'getImagesFromDrive')
+    .addItem('🎨 Open configurator', 'showSidebar')
+    .addItem('📥 Load images from Google Drive', 'getImagesFromDrive')
     .addToUi();
 }
 
@@ -76,9 +76,16 @@ function generateImages(
   numberOfImages = 1,
   partsAsObject?: {
     [key: string]: string[];
-  }
+  },
+  scoringThreshold?: number,
+  maxRegenerations?: number
 ) {
-  console.log('generateImages', { numberOfImages, partsAsObject });
+  console.log('generateImages', {
+    numberOfImages,
+    partsAsObject,
+    scoringThreshold,
+    maxRegenerations,
+  });
   const prefix = CONFIG['Prompt Prefix'];
   const suffix = CONFIG['Prompt Suffix'];
 
@@ -102,7 +109,8 @@ function generateImages(
     '',
     CONFIG['Image Generation Model'],
     scoringThreshold,
-    maxRegenerations
+    maxRegenerations,
+    CONFIG['Scoring Model']
   );
 }
 
@@ -177,34 +185,43 @@ const getScoringHeaders = () => {
     CONFIG['Scoring results sheet']
   );
   return sheet
-    ?.getRange(1, 2, 1, sheet.getLastColumn() - 2)
+    ?.getRange(1, 3, 1, sheet.getLastColumn() - 2)
     .getDisplayValues()[0];
 };
 
 class ScoringError extends Error {}
 const scoreImage = (image: string) => {
-  const headers = getScoringHeaders();
+  const headers = ['Score', ...(getScoringHeaders() || [])];
   const outputSpec =
     '## Ouput only JSON (no md or any additional formatting):\n' +
     '{' +
-    ['Score', ...(headers || [])]?.map(h => `'${h}': ...,`).join('\n') +
+    headers?.map(h => `"${h}": "...",`).join('\n') +
     '}';
+  const responseSchema = {
+    type: 'object',
+    properties: {
+      ...Object.fromEntries(headers?.map(h => [h, { type: 'string' }]) || []),
+    },
+    required: ['Score'],
+  };
 
   const geminiResponse = queryGemini(
-    CONFIG['Image Scoring Prompt'] + '\n\n' + outputSpec,
+    CONFIG['Image Scoring Prompt'], //+ '\n\n' + outputSpec,
     image,
     'image/png',
     CONFIG['Cloud Project Id'],
-    CONFIG['Image Generation Model']
+    CONFIG['Scoring Model'],
+    responseSchema
   );
+  console.log({ geminiResponse });
 
   try {
     const geminiResponseParsed = JSON.parse(
       geminiResponse.replaceAll('```json', '').replaceAll('```', '')
     );
-    console.log({ geminiResponseParsed });
     addToScoringSheet(image, geminiResponseParsed);
-    return Number(geminiResponseParsed['Scoring']);
+    console.log({ geminiResponseParsed });
+    return parseInt(geminiResponseParsed['Score']?.trim());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     console.log('Not able to parse JSON...');
@@ -216,10 +233,36 @@ const addToScoringSheet = (
   image: string,
   geminiResponseParsed: { [key: string]: string }
 ) => {
-  const headers = getScoringHeaders();
-  SpreadsheetApp.newCellImage()
+  console.log('addToScoringSheet', {
+    image,
+    geminiResponseParsed,
+  });
+  const img = SpreadsheetApp.newCellImage()
     .setSourceUrl(`data:image/png;base64,${image}`)
     .build();
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(
+    CONFIG['Scoring results sheet']
+  );
+  if (!sheet) {
+    console.log('Scoring results sheet not found');
+    return;
+  }
+
+  const headers = getScoringHeaders();
+  const output = [
+    '',
+    geminiResponseParsed['Score'],
+    ...Array(headers && headers?.length ? headers?.length : 0).fill(''),
+  ];
+  headers?.forEach((h, i) => {
+    output[i + 2] = geminiResponseParsed[h];
+  });
+
+  const lastRow = sheet.getLastRow();
+  sheet.appendRow(output);
+  sheet.getRange(lastRow + 1, 1, 1, 1).setValue(img);
+  sheet.setRowHeight(lastRow + 1, 256).setColumnWidth(1, 256);
 };
 
 const processImageAssets = (
@@ -228,8 +271,19 @@ const processImageAssets = (
   region: string,
   modelId: string,
   scoringThreshold?: number,
-  maxRegenerations?: number
+  maxRegenerations?: number,
+  scoringModel?: string
 ) => {
+  console.log('processImageAssets', {
+    backgroundDefinitions,
+    projectId,
+    region,
+    modelId,
+    scoringThreshold,
+    maxRegenerations,
+    scoringModel,
+  });
+
   if (!IMAGE_SHEET) {
     throw `Sheet 'Images' not found`;
   }
@@ -260,6 +314,9 @@ const processImageAssets = (
           let resultImageBase64;
           if (scoringThreshold && maxRegenerations) {
             for (let i = 0; i < maxRegenerations; i++) {
+              console.log(
+                `Attempt ${i + 1} to generate image for "${e.description}"`
+              );
               resultImageBase64 = queryGemini(
                 e.description,
                 base64Data,
@@ -268,12 +325,15 @@ const processImageAssets = (
                 CONFIG['Image Generation Model']
               );
               const imageScore = scoreImage(base64Data);
+              console.log(`Image score: ${imageScore}`);
 
               const cell = IMAGE_SHEET.getRange(
                 currentIndex + 1 + HEADER_ROWS,
                 4
               );
-              cell.setValue(`Score: ${imageScore}`);
+              cell.setValue(
+                cell.getValue() + `Image #${bgIndex + 1} score: ${imageScore}\n`
+              );
 
               if (imageScore >= scoringThreshold) {
                 cell.setFontColor('#000000').setFontWeight('normal');
