@@ -28,7 +28,6 @@ export class OnePrompt {
     promptPrefix = '',
     promptSuffix = ''
   ) {
-    console.log('generatePrompt', { partsAsObject });
     const promptParts = OnePrompt.generatePromptParts(partsAsObject);
     return (
       (promptPrefix ? promptPrefix + '\n\n' : '') +
@@ -40,10 +39,6 @@ export class OnePrompt {
   static generatePromptParts(partsAsObject: { [key: string]: string[] }) {
     const promptParts: string[] = [];
     for (const partType in partsAsObject) {
-      console.log('generatePromptParts', {
-        partType,
-        partsAsObjectPartType: partsAsObject[partType],
-      });
       const promptForPart =
         `### ${partType}:\n` +
         (partsAsObject[partType] instanceof Array
@@ -67,15 +62,11 @@ export class OnePrompt {
     if (!parts || !parts.length) {
       return {};
     }
-    console.log({ parts });
 
     const partsAsObject: { [key: string]: string[] } = {};
     const headers = parts.shift();
-    console.log({ headers, parts });
 
     parts.forEach(part => {
-      console.log({ part });
-
       part.forEach((p, i) => {
         if (p && p.length) {
           if (headers && headers[i]) {
@@ -87,7 +78,7 @@ export class OnePrompt {
         }
       });
     });
-    console.log({ partsAsObject });
+
     return partsAsObject;
   }
 }

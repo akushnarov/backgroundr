@@ -109,7 +109,12 @@ export class AppComponent implements OnInit {
     });
     google.script.run
       .withSuccessHandler(() => this.setLoadingToFinished())
-      .generateImages(this.numberOfImages, this.selectedValues);
+      .generateImages(
+        this.numberOfImages,
+        this.selectedValues,
+        this.autoScoreImages ? this.scoringThreshold : undefined,
+        this.maxRegenerations
+      );
   }
 
   generateAutomatically() {
@@ -119,6 +124,11 @@ export class AppComponent implements OnInit {
     this.isLoading = true;
     google.script.run
       .withSuccessHandler(() => this.setLoadingToFinished())
-      .generateImages(this.numberOfImages);
+      .generateImages(
+        this.numberOfImages,
+        undefined,
+        this.autoScoreImages ? Number(this.scoringThreshold) : undefined,
+        Number(this.maxRegenerations)
+      );
   }
 }

@@ -75,6 +75,8 @@ limitations under the License.
             type="number"
             [(ngModel)]="scoringThreshold"
             matTooltip="Regenerate images if the quality is below this threshold"
+            min="1"
+            step="1"
           />
         </mat-form-field>
 
@@ -85,6 +87,8 @@ limitations under the License.
             type="number"
             [(ngModel)]="maxRegenerations"
             matTooltip="Stop re-generating images after this many attempts"
+            min="1"
+            step="1"
           />
         </mat-form-field>
       </div>

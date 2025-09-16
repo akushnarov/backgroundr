@@ -179,7 +179,8 @@ export class VertexAiApi {
     text: string,
     image = '',
     mimeType = 'image/jpg',
-    json = false
+    json = false,
+    responseSchema = {}
   ) {
     const options = Object.assign({}, this._baseOptions);
 
@@ -190,7 +191,8 @@ export class VertexAiApi {
       });
     }
 
-    const payload = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload: any = {
       contents: [
         {
           role: 'user',
@@ -200,7 +202,10 @@ export class VertexAiApi {
       generationConfig: {
         temperature: 1,
         maxOutputTokens: 32768,
-        responseModalities: ['TEXT', 'IMAGE'],
+        responseModalities: this._geminiModel.includes('image')
+          ? ['TEXT', 'IMAGE']
+          : ['TEXT'],
+        topK: 40,
         topP: 0.95,
       },
       safetySettings: [
@@ -223,6 +228,14 @@ export class VertexAiApi {
       ],
     };
 
+    if (!this._geminiModel.includes('image') && responseSchema) {
+      payload['generationConfig'] = {
+        ...payload['generationConfig'],
+        responseSchema,
+        responseMimeType: 'application/json',
+      };
+    }
+
     options.payload = JSON.stringify(payload);
     const result = UrlFetchApp.fetch(this.getGeminiEndPoint(), options);
     if (200 !== result.getResponseCode()) {
@@ -238,6 +251,7 @@ export class VertexAiApi {
     let resultParsed: any;
     try {
       resultParsed = JSON.parse(result.getContentText('UTF-8'));
+      console.log('callGeminiApi', JSON.stringify(resultParsed, null, 2));
     } catch (e) {
       console.error(
         'JSON parse error for Gemini output',
@@ -279,12 +293,19 @@ export function queryGemini(
   image: string,
   mimeType = 'image/jpg',
   gcpProjectId = 'gps-generative-ai',
-  modelId = 'gemini-2.5-flash-image-preview'
+  modelId = 'gemini-2.5-flash-image-preview',
+  responseSchema = {}
 ) {
   return new VertexAiApi(
     gcpProjectId,
     '',
     'aiplatform.googleapis.com',
     modelId
-  ).callGeminiApi(prompt, image, mimeType);
+  ).callGeminiApi(
+    prompt,
+    image,
+    mimeType,
+    !modelId.includes('image'),
+    responseSchema
+  );
 }
