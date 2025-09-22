@@ -22,7 +22,7 @@ export class Config {
     return (
       SpreadsheetApp?.getActiveSpreadsheet()
         ?.getSheetByName(sheetName)
-        ?.getRange('A2:B')
+        ?.getRange('A:B')
         .getDisplayValues()
         .filter(
           e =>

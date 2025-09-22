@@ -237,6 +237,7 @@ export class VertexAiApi {
     }
 
     options.payload = JSON.stringify(payload);
+    Utilities.sleep(500); // To avoid error "Resource exhausted"
     const result = UrlFetchApp.fetch(this.getGeminiEndPoint(), options);
     if (200 !== result.getResponseCode()) {
       console.error(
@@ -251,7 +252,6 @@ export class VertexAiApi {
     let resultParsed: any;
     try {
       resultParsed = JSON.parse(result.getContentText('UTF-8'));
-      console.log('callGeminiApi', JSON.stringify(resultParsed, null, 2));
     } catch (e) {
       console.error(
         'JSON parse error for Gemini output',
@@ -291,9 +291,9 @@ export class VertexAiApi {
 export function queryGemini(
   prompt: string,
   image: string,
-  mimeType = 'image/jpg',
-  gcpProjectId = 'gps-generative-ai',
-  modelId = 'gemini-2.5-flash-image-preview',
+  mimeType: string,
+  gcpProjectId: string,
+  modelId: string,
   responseSchema = {}
 ) {
   return new VertexAiApi(

@@ -16,7 +16,7 @@
 
 import { Config } from './config';
 import { ensureFolderExists, getFileById, listFiles } from './drive-api';
-import { queryGemini } from './nano-banano';
+import { queryGemini } from './gemini';
 import { OnePrompt } from './one-prompt';
 
 const HEADER_ROWS = 1;
@@ -49,10 +49,19 @@ function include(filename: string) {
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🍌 BackgroundR')
+    .createMenu('BackgroundR on 🍌s')
     .addItem('🎨 Open configurator', 'showSidebar')
     .addItem('📥 Load images from Google Drive', 'getImagesFromDrive')
+    .addItem('🧹 Clear generated images', 'clearGeneratedImages')
     .addToUi();
+}
+
+function clearGeneratedImages() {
+  if (!IMAGE_SHEET) {
+    throw `Sheet 'Images' not found`;
+  }
+  // First column: Image, Second: drive id
+  IMAGE_SHEET.getDataRange().offset(HEADER_ROWS, 2).clearContent();
 }
 
 function getImagesFromDrive() {
@@ -96,12 +105,12 @@ function generateImages(
         prefix,
         suffix
       );
-  console.log({ prompt });
+  //console.log({ prompt });
 
   const manyPrompts = new Array(numberOfImages).fill(prompt).map(p => ({
     description: p,
   }));
-  console.log({ manyPrompts });
+  //console.log({ manyPrompts });
 
   return processImageAssets(
     manyPrompts,
@@ -109,8 +118,7 @@ function generateImages(
     '',
     CONFIG['Image Generation Model'],
     scoringThreshold,
-    maxRegenerations,
-    CONFIG['Scoring Model']
+    maxRegenerations
   );
 }
 
@@ -271,9 +279,9 @@ const processImageAssets = (
   region: string,
   modelId: string,
   scoringThreshold?: number,
-  maxRegenerations?: number,
-  scoringModel?: string
+  maxRegenerations?: number
 ) => {
+  console.log({ CONFIG });
   console.log('processImageAssets', {
     backgroundDefinitions,
     projectId,
@@ -281,7 +289,6 @@ const processImageAssets = (
     modelId,
     scoringThreshold,
     maxRegenerations,
-    scoringModel,
   });
 
   if (!IMAGE_SHEET) {
@@ -313,9 +320,15 @@ const processImageAssets = (
 
           let resultImageBase64;
           if (scoringThreshold && maxRegenerations) {
-            for (let i = 0; i < maxRegenerations; i++) {
+            for (
+              let attemptNumber = 0;
+              attemptNumber < maxRegenerations + 1;
+              attemptNumber++
+            ) {
               console.log(
-                `Attempt ${i + 1} to generate image for "${e.description}"`
+                `Attempt ${attemptNumber + 1} to generate image for "${
+                  e.description
+                }"`
               );
               resultImageBase64 = queryGemini(
                 e.description,
@@ -332,12 +345,15 @@ const processImageAssets = (
                 4
               );
               cell.setValue(
-                cell.getValue() + `Image #${bgIndex + 1} score: ${imageScore}\n`
+                cell.getValue() +
+                  `Image #${bgIndex + 1}, attempt #${
+                    attemptNumber + 1
+                  }, Score: ${imageScore}\n`
               );
 
               if (imageScore >= scoringThreshold) {
                 cell.setFontColor('#000000').setFontWeight('normal');
-                break;
+                break; // Stop generating
               } else {
                 cell.setFontColor('#ff0000').setFontWeight('bold');
               }
